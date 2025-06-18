@@ -1,0 +1,36 @@
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  nginx-back:
+    image: nginx:alpine
+    container_name: nginx-back
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./../src:${APP_DIR:-/var/www/html/app}
+    links:
+      - php-fpm
+    ports:
+      - "${HOST_PORT:-8080}:80"
+    networks:
+      - app-network
+
+  php-fpm:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+      args:
+        HOST_TZ: ${HOST_TZ:-UTC}
+        WORK_DIR: ${APP_DIR:-/var/www/html/app}
+        XDEBUG_INSTALL: ${XDEBUG_INSTALL:-false}
+    container_name: php-fpm
+    restart: unless-stopped
+    volumes:
+      - ./../src:${APP_DIR:-/var/www/html/app}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      - app-network
